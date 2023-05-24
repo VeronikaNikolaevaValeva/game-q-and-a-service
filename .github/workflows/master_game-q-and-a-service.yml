@@ -5,7 +5,11 @@ on:
   push:
     branches: [ "master" ]
   workflow_dispatch:
-
+  
+env:
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'       
+  PYTHON_VERSION: '3.10'                    
+  
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -35,11 +39,30 @@ jobs:
           tags: ${{ secrets.DOCKER_USERNAME }}/game-quiz-and-a-service:${{ github.sha }}
   deploy:
     runs-on: ubuntu-latest
-    needs: [build]
+    environment: dev
     steps:
-        # Deploy docker hub image to azure with publish auth
-      - name: deploy to azure
-        uses: azure/webapps-deploy@v2
-        with:
-            app-name: 'getquizgamedata'
-            publish-profile: ${{ secrets.AZURE_APPSERVICE_PUBLISHPROFILE }}
+    - name: 'deploy to azure'
+      uses: actions/checkout@v3
+
+    - name: Setup Python ${{ env.PYTHON_VERSION }} Environment
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: 'Resolve Project Dependencies Using Pip'
+      shell: bash
+      run: |
+        pushd './${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt --target=".python_packages/lib/site-packages"
+        popd
+
+    - name: 'Run Azure Functions Action'
+      uses: Azure/functions-action@v1
+      id: fa
+      with:
+        app-name: 'getquizgamedata'
+        package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+        publish-profile: ${{ secrets.AZURE_APPSERVICE_PUBLISHPROFILE }}
+        scm-do-build-during-deployment: true
+        enable-oryx-build: true
