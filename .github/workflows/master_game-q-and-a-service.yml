@@ -39,7 +39,7 @@ jobs:
     steps:
         # Deploy docker hub image to azure with publish auth
       - name: deploy to azure
-        uses: AzureFunctionApp@2
+        uses: azure/webapps-deploy@v2
         with:
             app-name: 'getquizgamedata'
             publish-profile: ${{ secrets.AZURE_APPSERVICE_PUBLISHPROFILE }}
